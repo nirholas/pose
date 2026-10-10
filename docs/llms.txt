@@ -1,0 +1,13 @@
+# @three-ws/pose
+
+> Deterministic, named pose seeds for rigged 3D avatars. Map a natural-language prompt to a stable seed + full Euler joint-rotation map from the three.ws pose-studio preset library.
+
+## Docs
+- [README](https://github.com/nirholas/pose/blob/main/README.md): install, usage and API
+- [AGENTS.md](https://github.com/nirholas/pose/blob/main/AGENTS.md): how an AI agent should use and modify this repo
+- [Site](https://nirholas.github.io/pose/): rendered docs
+- [npm](https://www.npmjs.com/package/@three-ws/pose)
+
+## Optional
+- [three.ws](https://three.ws): the platform this package belongs to
+- [llms-full.txt](https://three.ws/llms-full.txt): platform-wide index

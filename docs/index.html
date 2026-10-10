@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>@three-ws/pose</title>
+<meta name="description" content="Deterministic, named pose seeds for rigged 3D avatars. Map a natural-language prompt to a stable seed + full Euler joint-rotation map from the three.ws pose-studio preset library.">
+<link rel="canonical" href="https://nirholas.github.io/pose/">
+<meta property="og:title" content="@three-ws/pose">
+<meta property="og:description" content="Deterministic, named pose seeds for rigged 3D avatars. Map a natural-language prompt to a stable seed + full Euler joint-rotation map from the three.ws pose-studio preset library.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://nirholas.github.io/pose/">
+<meta name="twitter:card" content="summary">
+<link rel="alternate" type="text/plain" href="llms.txt" title="llms.txt">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareSourceCode","name":"@three-ws/pose","description":"Deterministic, named pose seeds for rigged 3D avatars. Map a natural-language prompt to a stable seed + full Euler joint-rotation map from the three.ws pose-studio preset library.","codeRepository":"https://github.com/nirholas/pose","url":"https://nirholas.github.io/pose/","license":"https://spdx.org/licenses/Apache-2.0","programmingLanguage":"JavaScript"}</script>
+<style>
+:root{--bg:#fff;--ink:#14141a;--dim:#4d4d5c;--accent:#5b3cf0;--code:#f3f2f9;--line:#e3e1ee}
+@media (prefers-color-scheme:dark){:root{--bg:#0e0e14;--ink:#f1f0f8;--dim:#b4b3c4;--accent:#9d86ff;--code:#1a1a24;--line:#2a2a38}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:820px;margin:0 auto;padding:40px 16px 80px}
+nav{max-width:820px;margin:0 auto;padding:16px;display:flex;gap:16px;flex-wrap:wrap;font-size:.9rem}
+h1,h2,h3{line-height:1.2}h2{margin-top:2.2em;border-bottom:1px solid var(--line);padding-bottom:.3em}
+p,li{color:var(--dim)}a{color:var(--accent)}a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto}
+code{font:.9em ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink)}
+table{border-collapse:collapse;display:block;overflow-x:auto}td,th{border:1px solid var(--line);padding:6px 10px;text-align:left}
+img{max-width:100%}
+</style>
+</head>
+<body>
+<nav aria-label="Project"><a href="https://github.com/nirholas/pose">GitHub</a><a href="https://www.npmjs.com/package/@three-ws/pose">npm</a><a href="llms.txt">llms.txt</a><a href="https://three.ws">three.ws</a></nav>
+<main>
+<p align="center">
+  <a href="https://three.ws"><img src="https://three.ws/three-ws-mcp-icon.svg" width="72" height="72" alt="three.ws" /></a>
+</p><h1 align="center">@three-ws/pose</h1><p align="center"><strong>Turn a phrase into a pose, a deterministic seed plus the full joint-rotation map for a rigged 3D avatar.</strong></p><p align="center">
+  <a href="https://www.npmjs.com/package/@three-ws/pose"><img alt="npm" src="https://img.shields.io/npm/v/@three-ws/pose?logo=npm&color=cb3837"></a>
+  <a href="https://www.npmjs.com/package/@three-ws/pose"><img alt="downloads" src="https://img.shields.io/npm/dm/@three-ws/pose?color=cb3837"></a>
+  <img alt="license" src="https://img.shields.io/npm/l/@three-ws/pose?color=3b82f6">
+  <img alt="node" src="https://img.shields.io/node/v/@three-ws/pose?color=339933&logo=node.js">
+</p><p align="center">
+  <a href="#install">Install</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#api">API</a> ·
+  <a href="#how-it-works">How it works</a> ·
+  <a href="https://three.ws/pose">three.ws</a>
+</p><hr>
+<blockquote>
+<p><code>@three-ws/pose</code> is the official client for the three.ws <strong>Pose Studio</strong>, the
+engine behind <a href="https://three.ws/pose">three.ws/pose</a>. It maps a natural-language
+pose description (<code>&quot;warrior stance&quot;</code>, <code>&quot;wave hello&quot;</code>, <code>&quot;sitting cross-legged&quot;</code>)
+to a <strong>deterministic seed</strong> and the <strong>complete Euler joint-rotation map</strong> for the
+three.ws humanoid mannequin, picked from an in-repo library of named preset poses.
+The same prompt always yields the same pose, so it is a perfect way to <em>seed</em> or
+<em>initialize</em> a rigged character before you hand off to keyframes or live control.
+It runs the <code>pose_model</code> algorithm <strong>locally</strong> over the bundled preset library
+(pure, deterministic compute, no model inference, no network), and can optionally
+call the hosted tool on <code>/api/mcp-3d</code> instead. It pairs with
+<a href="https://www.npmjs.com/package/@three-ws/forge"><code>@three-ws/forge</code></a> (which <em>makes &amp; rigs</em>
+the avatar) and <a href="https://www.npmjs.com/package/@three-ws/avatar"><code>@three-ws/avatar</code></a>
+(which <em>renders</em> it).</p>
+</blockquote>
+<h2>Why</h2>
+<p>You have a rigged humanoid GLB and you want it to <em>do</em> something, not a baked clip,
+just a single, named static pose to start from. Hand-authoring Euler rotations per
+joint is tedious and error-prone: which axis bends the elbow, how far does the
+shoulder open, where does the root drop for a crouch? Pose Studio answers that once,
+for a curated library of real poses, and exposes it as a single call:</p>
+<ul>
+<li><strong>A phrase in, a pose out.</strong> <code>poseSeed(&#39;warrior stance&#39;)</code> resolves to a full
+<code>jointName → { x, y, z }</code> rotation map in radians, ready to apply to your rig.</li>
+<li><strong>Deterministic by design.</strong> The result is keyed by <code>sha256(prompt|presetId)</code>.
+Same prompt, same machine, same pose, every time. Reproducible across runs, CI,
+and clients. No randomness, no drift.</li>
+<li><strong>Always a real pose.</strong> Selection scores your prompt against preset labels, ids,
+and groups; on no match it falls back to a deterministic pick. There is no synthetic
+or empty-pose codepath, you always get a usable, hand-tuned pose back.</li>
+<li><strong>Free and offline.</strong> The algorithm is pure local computation (token scoring +
+sha256, no GPU, no inference), so the zero-config path runs entirely in-process:
+no network, no key, no wallet. It works on a plane.</li>
+</ul>
+<p>This is the SDK twin of the <a href="https://three.ws/mcp">3D Studio MCP server</a>: the same
+preset engine, exposed as plain functions instead of an MCP tool.</p>
+<h2>Install</h2>
+<pre><code class="language-bash">npm install @three-ws/pose
+</code></pre>
+<p>Zero runtime dependencies. Works in Node 18+ and the browser (uses WebCrypto,
+and <code>fetch</code> only on the optional hosted lane).
+To render or rig the avatar you pose, add
+<a href="https://www.npmjs.com/package/@three-ws/avatar"><code>@three-ws/avatar</code></a> and
+<a href="https://www.npmjs.com/package/@three-ws/forge"><code>@three-ws/forge</code></a>.</p>
+<h2>Quick start</h2>
+<p>No key, no wallet, no network:</p>
+<pre><code class="language-js">import { poseSeed } from &#39;@three-ws/pose&#39;;
+
+const pose = await poseSeed(&#39;wave hello&#39;);
+
+console.log(pose.presetId);   // → &#39;wave&#39;
+console.log(pose.seed);       // → &#39;4ae1977023a2568b&#39; (stable sha256-derived)
+console.log(pose.parameters); // → { shoulderR: { x: 0, y: 0, z: -2.45 }, elbowR: { x: -1.2, … }, … }
+console.log(pose.previewUrl); // → https://three.ws/pose?seed=4ae1977023a2568b&amp;preset=wave
+</code></pre>
+<p>Apply the rotations straight to a Three.js skeleton:</p>
+<pre><code class="language-js">import { poseSeed } from &#39;@three-ws/pose&#39;;
+
+const { parameters } = await poseSeed(&#39;the thinker&#39;);
+
+for (const [jointName, euler] of Object.entries(parameters)) {
+  if (jointName === &#39;rootPosition&#39;) {
+    rig.position.set(euler.x, euler.y, euler.z); // optional whole-figure offset
+    continue;
+  }
+  const bone = rig.getObjectByName(jointName);
+  if (bone) bone.rotation.set(euler.x, euler.y, euler.z); // radians
+}
+</code></pre>
+<p>Same prompt, same pose, useful as a fixed initialization seed:</p>
+<pre><code class="language-js">const a = await poseSeed(&#39;crouch&#39;);
+const b = await poseSeed(&#39;crouch&#39;);
+console.log(a.seed === b.seed); // → true, always
+</code></pre>
+<h2>API</h2>
+<h3><code>poseSeed(prompt, options?) → Promise&lt;PoseResult&gt;</code></h3>
+<p>Resolve a natural-language pose description to a deterministic seed and the full
+joint-rotation map. <code>prompt</code> is a string, 1-500 characters. Runs locally.</p>
+<p><strong>Per-call options</strong></p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>signal</code></td>
+<td><code>AbortSignal</code></td>
+<td>none</td>
+<td>Cancel the call.</td>
+</tr>
+<tr>
+<td><code>headers</code></td>
+<td><code>Record&lt;string,string&gt;</code></td>
+<td>none</td>
+<td>Extra headers (hosted lane only).</td>
+</tr>
+</tbody></table>
+<h3><code>createPose(options?) → PoseClient</code></h3>
+<p>Build a client with fixed configuration. With no transport option the client
+resolves poses <strong>locally</strong>, exactly like the top-level <code>poseSeed</code>. Passing any
+of <code>baseUrl</code>, <code>apiKey</code>, or <code>fetch</code> switches it to the <strong>hosted</strong> <code>pose_model</code>
+tool on <code>POST /api/mcp-3d</code> (one JSON-RPC <code>tools/call</code> per pose):</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>Type</th>
+<th>Default</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>baseUrl</code></td>
+<td><code>string</code></td>
+<td><code>https://three.ws</code></td>
+<td>API origin. Selects the hosted lane.</td>
+</tr>
+<tr>
+<td><code>fetch</code></td>
+<td><code>typeof fetch</code></td>
+<td><code>globalThis.fetch</code></td>
+<td>E.g. a payment-aware x402 fetch. Selects the hosted lane.</td>
+</tr>
+<tr>
+<td><code>apiKey</code></td>
+<td><code>string</code></td>
+<td>none</td>
+<td>OAuth bearer; hosted calls run operator-funded. Selects the hosted lane.</td>
+</tr>
+<tr>
+<td><code>previewBase</code></td>
+<td><code>string</code></td>
+<td><code>https://three.ws/pose</code></td>
+<td>Base URL for the returned <code>previewUrl</code> (both lanes).</td>
+</tr>
+<tr>
+<td><code>headers</code></td>
+<td><code>Record&lt;string,string&gt;</code></td>
+<td>none</td>
+<td>Default headers on every hosted-lane request.</td>
+</tr>
+</tbody></table>
+<p>On the hosted lane a keyless call is x402-priced per call: the server answers
+<code>401/402</code> with a payment challenge, surfaced as <code>PaymentRequiredError</code> with the
+<code>accepts</code> array. Settle it with a payment-aware <code>fetch</code> (e.g.
+<a href="https://www.npmjs.com/package/@three-ws/x402-fetch"><code>@three-ws/x402-fetch</code></a>) or
+pass an <code>apiKey</code> to run operator-funded. The local lane never charges anything.</p>
+<p><strong>Returns</strong> <code>PoseResult</code></p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>seed</code></td>
+<td><code>string</code></td>
+<td>16-hex stable id, <code>sha256(prompt|presetId).slice(0,16)</code>.</td>
+</tr>
+<tr>
+<td><code>presetId</code></td>
+<td><code>string</code></td>
+<td>The picked preset&#39;s id, e.g. <code>&#39;wave&#39;</code>, <code>&#39;warrior2&#39;</code>, <code>&#39;crouch&#39;</code>.</td>
+</tr>
+<tr>
+<td><code>presetLabel</code></td>
+<td><code>string</code></td>
+<td>Human label, e.g. <code>&#39;Wave hello&#39;</code>, <code>&#39;Warrior II (yoga)&#39;</code>.</td>
+</tr>
+<tr>
+<td><code>group</code></td>
+<td><code>string</code></td>
+<td>One of <code>Standing</code>, <code>Action</code>, <code>Sitting &amp; Floor</code>, <code>Expressive</code>.</td>
+</tr>
+<tr>
+<td><code>parameters</code></td>
+<td><code>Record&lt;string, { x, y, z }&gt;</code></td>
+<td>Joint → Euler rotation <strong>in radians</strong>. May include <code>rootPosition</code> (a translation, not a rotation).</td>
+</tr>
+<tr>
+<td><code>previewUrl</code></td>
+<td><code>string</code></td>
+<td>Open the result on <code>three.ws/pose</code> with <code>seed</code> + <code>preset</code> params.</td>
+</tr>
+<tr>
+<td><code>match</code></td>
+<td><code>{ score: number, reason: string }</code></td>
+<td><code>reason</code> is <code>token-match</code> or <code>no-match-deterministic-pick</code>.</td>
+</tr>
+<tr>
+<td><code>groups</code></td>
+<td><code>string[]</code></td>
+<td>All four preset groups, for building a picker.</td>
+</tr>
+</tbody></table>
+<p><code>parameters</code> follows the mannequin convention: in rest pose every rotation is <code>0</code>,
+arms at the sides. <code>shoulder.z</code> opens an arm outward, <code>shoulder.x</code> is forward(−)/
+back(+), <code>elbow.x</code> bends (negative bends the forearm up). Joints not present in a
+pose are at rest (<code>0</code>).</p>
+<h3><code>presetPose(presetId, options?) → Promise&lt;PoseResult&gt;</code></h3>
+<p>Skip selection and resolve a specific preset by id, handy once a user has chosen
+one from a picker. The local lane looks the preset up directly (never through
+prompt scoring, so the id you ask for is always the preset you get, with
+<code>match.reason === &#39;preset-id&#39;</code>) and seeds with the preset id as the prompt, so
+the same preset always returns the same seed.</p>
+<h3><code>listPresetGroups() → string[]</code></h3>
+<p>The four pose groups, returned synchronously for menu scaffolding:
+<code>[&#39;Standing&#39;, &#39;Action&#39;, &#39;Sitting &amp; Floor&#39;, &#39;Expressive&#39;]</code>.</p>
+<h2>How it works</h2>
+<p><code>poseSeed()</code> runs the <code>pose_model</code> algorithm in-process, over the preset library
+bundled with the package (the same library the hosted tool serves). It is <strong>pure
+deterministic computation</strong>: it scores your prompt against the named presets, picks
+one, derives a seed, and returns the preset&#39;s pre-authored rotation map. No image
+model, no GPU, no state, no network.</p>
+<pre><code>prompt (&quot;warrior stance&quot;)
+        │
+        ▼
+  tokenize → score every preset by token overlap
+  (preset id + label + group all contribute vocabulary)
+        │
+        ├─ best score &gt; 0 ──▶ token-match  ─────────┐
+        └─ no overlap ──────▶ sha256(prompt) % N ───┤  (deterministic fallback)
+                                                     ▼
+                         picked preset { id, label, group, pose }
+                                                     │
+        seed = sha256(prompt | presetId).slice(0,16) ▼
+                          { seed, presetId, parameters, previewUrl, … }
+</code></pre>
+<p>The preset library spans four groups: <strong>Standing</strong> (T-pose, A-pose, relaxed,
+contrapposto, arms-up, wave, hands-on-hips, salute), <strong>Action</strong> (walk-step, run,
+jump, punch, archery, superhero-landing, fighting-stance), <strong>Sitting &amp; Floor</strong>
+(chair, floor, kneel, crouch, thinker), and <strong>Expressive</strong> (praying, meditate,
+warrior II, arabesque, flex, point, facepalm, bow). It is the same data the public
+<a href="https://three.ws/pose">/pose</a> page renders; enumerate it at runtime from the
+exported <code>PRESETS</code> array rather than hardcoding.</p>
+<h3>The hosted lane: the raw HTTP</h3>
+<p>The same engine is hosted as the <code>pose_model</code> tool on the 3D Studio MCP server.
+The SDK calls it only when you configure a transport (see <code>createPose</code> above);
+the wire call is a standard MCP <code>tools/call</code>, x402-priced for keyless callers:</p>
+<pre><code class="language-js">const res = await fetch(&#39;https://three.ws/api/mcp-3d&#39;, {
+  method: &#39;POST&#39;,
+  headers: {
+    &#39;content-type&#39;: &#39;application/json&#39;,
+    accept: &#39;application/json, text/event-stream&#39;,
+  },
+  body: JSON.stringify({
+    jsonrpc: &#39;2.0&#39;,
+    id: 1,
+    method: &#39;tools/call&#39;,
+    params: { name: &#39;pose_model&#39;, arguments: { prompt: &#39;warrior stance&#39; } },
+  }),
+});
+
+const { result } = await res.json();
+const pose = result.structuredContent;
+// → { seed, preset_id, preset_label, group, parameters, preview_url, match, groups }
+</code></pre>
+<p>The HTTP tool returns <strong>snake_case</strong> keys (<code>preset_id</code>, <code>preview_url</code>); the SDK
+normalizes them to the camelCase <code>PoseResult</code> shape above (both lanes go through
+the same normalization, so results are interchangeable).</p>
+<h2>Pricing</h2>
+<p>The default local lane is <strong>free</strong>: pure in-process compute, no payment, no key,
+no wallet, nothing to meter.</p>
+<p>The hosted <code>pose_model</code> tool on <code>POST /api/mcp-3d</code> is priced per call over
+<a href="https://x402.org">x402</a> for keyless callers, alongside the rest of the 3D Studio
+tools. The authoritative price is the one in the server&#39;s <code>402</code> payment challenge
+(surfaced by this SDK as <code>PaymentRequiredError.accepts</code>); read it at runtime
+rather than hardcoding. Calls authenticated with a three.ws OAuth <code>apiKey</code> run
+operator-funded instead of paying x402.</p>
+<h2>Errors &amp; edge cases</h2>
+<p><code>poseSeed()</code> rejects with a typed <code>PoseError</code> carrying a <code>code</code>:</p>
+<table>
+<thead>
+<tr>
+<th><code>code</code></th>
+<th>Meaning</th>
+<th>Recovery</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>invalid_prompt</code></td>
+<td>Prompt empty or over 500 chars (the tool requires 1-500).</td>
+<td>Trim to a short phrase.</td>
+</tr>
+<tr>
+<td><code>network_error</code></td>
+<td>Hosted lane only: the endpoint was unreachable.</td>
+<td>Retry; honour the <code>signal</code>.</td>
+</tr>
+<tr>
+<td><code>tool_error</code></td>
+<td>Hosted lane only: the MCP server returned a JSON-RPC error.</td>
+<td>Inspect <code>error.data</code>; retry.</td>
+</tr>
+<tr>
+<td><code>payment_required</code></td>
+<td>Hosted lane only, keyless: the x402 challenge (a <code>PaymentRequiredError</code>).</td>
+<td>Pay via <code>accepts</code>, pass an <code>apiKey</code>, or use the free local lane.</td>
+</tr>
+</tbody></table>
+<p>Designed states, not crashes:</p>
+<ul>
+<li><strong>No keyword match</strong> is not an error. The tool falls back to a deterministic pick
+(<code>match.reason === &#39;no-match-deterministic-pick&#39;</code>) and still returns a real pose.
+Inspect <code>match.score === 0</code> if you want to flag a weak match in your UI.</li>
+<li><strong><code>rootPosition</code></strong> appears in <code>parameters</code> for poses that drop or lift the whole
+figure (crouch, sit, jump). Treat it as a position offset, <strong>not</strong> a bone rotation.</li>
+<li><strong>Determinism is per-prompt-string.</strong> <code>&quot;Wave&quot;</code> and <code>&quot;wave hello&quot;</code> may resolve to
+the same preset but produce <strong>different seeds</strong> (the seed hashes the exact prompt).
+Reuse the exact prompt string for a stable seed.</li>
+</ul>
+<h2>Examples</h2>
+<p><strong>Build a pose picker</strong> from the live groups, then resolve a chosen preset:</p>
+<pre><code class="language-js">import { poseSeed, listPresetGroups } from &#39;@three-ws/pose&#39;;
+
+for (const group of listPresetGroups()) renderGroupHeader(group);
+
+button.onclick = async () =&gt; {
+  const pose = await poseSeed(input.value || &#39;relaxed stand&#39;);
+  applyToRig(pose.parameters);
+  shareLink.href = pose.previewUrl;
+};
+</code></pre>
+<p><strong>Seed a freshly forged avatar</strong>, generate, rig, then drop into a starting pose:</p>
+<pre><code class="language-js">import { forge, rig } from &#39;@three-ws/forge&#39;;
+import { poseSeed } from &#39;@three-ws/pose&#39;;
+
+const base = await forge(&#39;a cartoon astronaut, full body&#39;);
+const rigged = await rig(base.glbUrl);          // animation-ready humanoid
+const start = await poseSeed(&#39;superhero landing&#39;); // initial pose
+// load rigged.glbUrl, then apply start.parameters to its skeleton
+</code></pre>
+<p><strong>Agent / MCP</strong>: the same capability is the <code>pose_model</code> tool on the hosted 3D
+Studio MCP server. An agent that already holds an MCP session can call it with
+<code>{ prompt: &#39;kneeling&#39; }</code> and receive the identical preset + seed this package
+computes locally.</p>
+<h2>Related</h2>
+<ul>
+<li><a href="https://www.npmjs.com/package/@three-ws/forge"><code>@three-ws/forge</code></a>, generate and auto-rig the humanoid GLB you pose.</li>
+<li><a href="https://www.npmjs.com/package/@three-ws/avatar"><code>@three-ws/avatar</code></a>, render and animate the rigged, posed avatar.</li>
+<li><a href="https://www.npmjs.com/package/@three-ws/mocap"><code>@three-ws/mocap</code></a>, go beyond static poses: capture full pose/face/hand clips from webcam or video.</li>
+<li><a href="https://www.npmjs.com/package/@three-ws/x402-fetch"><code>@three-ws/x402-fetch</code></a>, a payment-aware fetch that auto-settles the hosted x402 lane.</li>
+</ul>
+<hr>
+<p align="center">Built by <a href="https://three.ws">three.ws</a> · The only coin is <a href="https://three.ws">$THREE</a></p><h2>Security and contributing</h2>
+<p>See <a href="SECURITY.md">SECURITY.md</a>, <a href="CONTRIBUTING.md">CONTRIBUTING.md</a> and <a href="AGENTS.md">AGENTS.md</a> (for AI agents). Part of <a href="https://three.ws">three.ws</a>.</p>
+
+</main>
+</body>
+</html>
